@@ -1,0 +1,64 @@
+# Базовые настройки безопасности
+ServerSignature Off
+Options -Indexes
+FileETag None
+
+# Блокировка доступа к критичным файлам
+<FilesMatch "\.(enc|log|sql|db|env)$">
+    Require all denied
+</FilesMatch>
+
+<Files LICENSE_FILE>
+    Require all denied
+</Files>
+
+<Files LOG_FILE>
+    Require all denied
+</Files>
+
+# Защита от XSS и MIME-sniffing
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Запрет выполнения PHP в uploads
+<DirectoryMatch "uploads">
+    <FilesMatch "\.ph(p[0-9]?|t|tml)$">
+        Require all denied
+    </FilesMatch>
+</DirectoryMatch>
+
+# Защита от SQL-инъекций и LFI
+RewriteEngine On
+RewriteCond %{QUERY_STRING} [^a-z](declare|char|set|cast|convert|delete|drop|exec|insert|meta|script|select|truncate|update|union|md5|benchmark) [NC]
+RewriteRule .* - [F]
+
+# Блокировка нестандартных User-Agents
+<IfModule mod_rewrite.c>
+    RewriteCond %{HTTP_USER_AGENT} (havij|libwww-perl|wget|python|nikto|curl|scan|java|winhttp|clshttp|loader) [NC,OR]
+    RewriteCond %{HTTP_USER_AGENT} (%0A|%0D|%27|%3C|%3E|%00) [NC,OR]
+    RewriteCond %{HTTP_USER_AGENT} (;|<|>|'|\"|\)|\(|%0A|%0D|%22|%27|%28|%3C|%3E|%00).*(libwww-perl|wget|python|nikto|curl|scan|java|winhttp|clshttp|loader)
+    RewriteRule .* - [F]
+</IfModule>
+
+# Ограничение методов запроса
+<LimitExcept GET POST>
+    Deny from all
+</LimitExcept>
+
+# Защита от переполнения памяти
+<IfModule mod_php.c>
+    php_value post_max_size 2M
+    php_value upload_max_filesize 1M
+    php_value max_execution_time 30
+    php_value max_input_time 15
+</IfModule>
+
+# Обработка ошибок
+ErrorDocument 400 /error.php
+ErrorDocument 403 /error.php
+ErrorDocument 404 /error.php
+ErrorDocument 500 /error.php
+ErrorDocument 503 /error.php
